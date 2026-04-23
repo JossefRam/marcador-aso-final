@@ -78,16 +78,17 @@ body {
 </div>
 
 <script>
-async function actualizar() {
+async function actualizarMarcador() {
   try {
     const res = await fetch("https://marcador-aso-final.onrender.com/estado?nocache=" + Date.now());
     const data = await res.json();
 
-    document.getElementById("scoreLocal").innerText = data.local;
-    document.getElementById("scoreVisit").innerText = data.visita;
+    // 👇 AJUSTA ESTOS IDs A LOS TUYOS REALES
+    document.getElementById("scoreTeam1").innerText = data.local;
+    document.getElementById("scoreTeam2").innerText = data.visita;
 
-    document.getElementById("time").innerText = data.tiempo;
-    document.getElementById("period").innerText = data.cuarto;
+    document.getElementById("mainClock").innerText = data.tiempo;
+    document.getElementById("periodDisplay").innerText = data.cuarto;
 
   } catch (e) {
     console.log("Error:", e);
@@ -95,8 +96,8 @@ async function actualizar() {
 }
 
 // actualizar cada segundo
-setInterval(actualizar, 1000);
-actualizar();
+setInterval(actualizarMarcador, 1000);
+actualizarMarcador();
 </script>
 
 </body>
