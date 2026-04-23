@@ -350,7 +350,9 @@
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
 <script>
-  const socket = io();
+  const socket = io("https://marcador-aso-final.onrender.com", {
+  transports: ["websocket"],
+});
 
   socket.on("updateScore", (data) => {
     document.getElementById("local").innerText = data.local;
