@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Panel de Control - Marcador</title>
+<style>
+  :root {
+    --bg: #1e1e1e;
+    --panel: #2a2a2a;
+    --accent: #ff0000;
+    --text: #fff;
+    --muted: #999;
+    --warn: #ff0000;
+    --sound: #4a6fc3;
+    --possession: #0db04b;
+    --fouls: #ff0000;
+  }
+  body {
+    font-family: "Segoe UI", Roboto, Arial;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 16px 24px;
+    font-size: 1.6rem;
+    font-weight: 600;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+  }
+  .container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(330px,1fr));
+    gap: 16px;
+    padding: 20px;
+  }
+  .card {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  }
+  h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+    color: var(--accent);
+    border-bottom: 1px solid #333;
+    padding-bottom: 6px;
+  }
+  button {
+    background: #333;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    margin: 4px;
+    color: var(--text);
+    font-weight: 600;
+    transition: all .2s;
+  }
+  button:hover { background: #3d3d3d; }
+  button.primary { background: var(--accent); border: 0; }
+  button.primary:hover { background: #09933d; }
+  button.warn { background: var(--warn); border: 0; color: #222; }
+  button.sound { background: var(--sound); border: 0; }
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #222;
+    color: var(--text);
+    margin-top: 4px;
+    margin-bottom: 8px;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .score-display {
+    text-align: center;
+    background: #111;
+    color: #fff;
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .teams {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .team {
+    width: 40%;
+    position: relative;
+  }
+  .team-logo {
+    width: 64px;
+    height: 64px;
+    background: #333;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: auto;
+  }
+  .team-logo img { width: 100%; height: 100%; object-fit: contain; }
+  .team-name { font-weight: 600; margin-top: 4px; }
+  .team-score { font-size: 2rem; font-weight: 800; margin-top: 4px; }
+  .team-fouls {
+    font-size: 1rem;
+    margin-top: 8px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .team-fouls.acumulado {
+    color: var(--fouls);
+    font-weight: 800;
+  }
+  .clock { font-size: 2.4rem; font-weight: bold; margin: 12px 0; }
+  .quarter { font-size: 1rem; color: var(--muted); }
+  .actions { text-align: center; margin-top: 12px; }
+
+  /* Indicadores de posesión CORREGIDOS */
+  .possession-indicator {
+    position: absolute;
+    top: -8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--possession);
+    border: 2px solid #fff;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .possession-indicator.active {
+    opacity: 1;
+  }
+  /* LOCAL (izquierda) - indicador a la derecha */
+  .possession-local {
+    right: -10px;
+  }
+  /* VISITANTE (derecha) - indicador a la izquierda */
+  .possession-visitor {
+    left: -10px;
+  }
+
+  /* pequeñas responsividades */
+  @media(max-width:700px){
+    .clock { font-size: 1.6rem; }
+    .team-score { font-size: 1.4rem; }
+    .team-logo { width:48px; height:48px; }
+    .team-fouls { font-size: 0.9rem; }
+    .possession-indicator {
+      width: 16px;
+      height: 16px;
+    }
+    .possession-local {
+      right: -8px;
+    }
+    .possession-visitor {
+      left: -8px;
+    }
+  }
+</style>
+</head>
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+  const socket = io();
+
+  function enviarMarcador() {
+    const local = document.getElementById("local").value;
+    const visita = document.getElementById("visita").value;
+
+    socket.emit("updateScore", {
+      local: local,
+      visita: visita
+    });
+  }
+</script>
+
+<body>
+  
+  <header>🏀 Panel de Control - Marcador Principal</header>
+
+  <div class="container">
+
+    <!-- Vista rápida -->
+    <div class="card">
+      <h2>Vista del Marcador</h2>
+      <div class="score-display">
+        <div class="teams">
+          <div class="team">
+            <!-- LOCAL (izquierda) -->
+            <div class="possession-indicator possession-local" id="display-possession1"></div>
+            <div class="team-logo" id="display-logo1"></div>
+            <div class="team-name" id="display-name1">Local</div>
+            <div class="team-score" id="display-score1">0</div>
+            <div class="team-fouls" id="display-fouls1">Faltas: <span id="display-f1">0</span></div>
+          </div>
+          <div>
+            <div class="clock" id="display-clock">10:00</div>
+            <div class="quarter" id="display-quarter">1ER.T</div>
+          </div>
+          <div class="team">
+            <!-- VISITANTE (derecha) -->
+            <div class="possession-indicator possession-visitor" id="display-possession2"></div>
+            <div class="team-logo" id="display-logo2"></div>
+            <div class="team-name" id="display-name2">Visitante</div>
+            <div class="team-score" id="display-score2">0</div>
+            <div class="team-fouls" id="display-fouls2">Faltas: <span id="display-f2">0</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Equipos -->
+    <div class="card">
+      <h2>Equipos & Logos</h2>
+      <label>Equipo Local</label>
+      <input id="name1" type="text" placeholder="Nombre del Local" />
+      <input id="url1" type="text" placeholder="URL del logo o subir archivo" />
+      <input id="file1" type="file" accept="image/*" />
+
+      <label>Equipo Visitante</label>
+      <input id="name2" type="text" placeholder="Nombre del Visitante" />
+      <input id="url2" type="text" placeholder="URL del logo o subir archivo" />
+      <input id="file2" type="file" accept="image/*" />
+      <button class="primary" onclick="applyNamesAndLogos()">Aplicar nombres y logos</button>
+    </div>
+
+    <!-- Puntaje, Faltas y Posesión - MODIFICADO -->
+    <div class="card">
+      <h2>Puntajes, Faltas & Posesión</h2>
+      <div class="row">
+        <div style="flex:1">
+          <div><strong>Local</strong></div>
+          <button onclick="addPoints(1,1)">+1</button>
+          <button onclick="addPoints(1,2)">+2</button>
+          <button onclick="addPoints(1,3)">+3</button>
+          <button onclick="decPoints(1)">-1</button>
+          <br>
+          <button onclick="addFoul(1)">+1 Falta</button>
+          <button onclick="decFoul(1)">-1</button>
+        </div>
+        <div style="flex:1">
+          <div><strong>Visitante</strong></div>
+          <button onclick="addPoints(2,1)">+1</button>
+          <button onclick="addPoints(2,2)">+2</button>
+          <button onclick="addPoints(2,3)">+3</button>
+          <button onclick="decPoints(2)">-1</button>
+          <br>
+          <button onclick="addFoul(2)">+1 Falta</button>
+          <button onclick="decFoul(2)">-1</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;text-align:center">
+        <button onclick="setPossession(1)">Posesión LOCAL</button>
+        <button onclick="setPossession(2)">Posesión VISITANTE</button>
+        <button onclick="setPossession(0)">Quitar</button>
+      </div>
+    </div>
+
+    <!-- Cronómetro y Cuartos - MODIFICADO -->
+    <div class="card">
+      <h2>Cronómetro & Cuartos</h2>
+      <div class="row">
+        <input id="customMin" type="number" min="0" value="10" style="width:80px" />min
+        <input id="customSec" type="number" min="0" max="59" value="0" style="width:80px" />seg
+        <button onclick="setCustomTime()">Set</button>
+      </div>
+      <div class="actions">
+        <button class="primary" onclick="startClock()">Iniciar</button>
+        <button onclick="pauseClock()">Pausar</button>
+        <button onclick="resetClock()">Reiniciar</button>
+      </div>
+      
+      <!-- Cuartos integrados en Cronómetro -->
+      <div style="margin-top: 16px; border-top: 1px solid #333; padding-top: 16px;">
+        <select id="quarterSelect" style="margin-bottom: 12px;">
+          <option value="1T">1ER.T</option>
+          <option value="2T">2DO.T</option>
+          <option value="3T">3ER.T</option>
+          <option value="4T">4TO.T</option>
+          <option value="OT1">OT1</option>
+          <option value="OT2">OT2</option>
+          <option value="OT3">OT3</option>
+        </select>
+        <div class="actions">
+          <button onclick="setQuarterFromSelect()">Set Cuarto</button>
+          <button onclick="nextQuarter()">Siguiente</button>
+        </div>
+      </div>
+      
+      <!-- Sonidos -->
+      <div style="margin-top: 16px; border-top: 1px solid #333; padding-top: 16px;">
+        <div class="actions">
+          <button class="sound" onclick="playChicharra()">Chicharra</button>
+          <button class="sound" onclick="playSilbato()">Silbato</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opciones - MODIFICADO -->
+    <div class="card">
+      <h2>Opciones</h2>
+      <div class="actions">
+        <button class="warn" onclick="resetAll()">Reiniciar TODO</button>
+        <button onclick="sendState()">Forzar sincronizar</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+/* STATE */
+const DEFAULT = {
+  e1:"Local", e2:"Visitante",
+  p1:0, p2:0,
+  f1:0, f2:0,
+  logo1:null, logo2:null,
+  possession:0,
+  time:600,
+  running:false,
+  quarter:"1T",
+  shotClockTime: 0,      // NUEVO: tiempo del reloj de tiro
+  shotClockRunning: false // NUEVO: estado del reloj de tiro
+};
+let state = Object.assign({}, DEFAULT);
+
+// Variables para controlar los sonidos
+let chicharraSound = null;
+let silbatoSound = null;
+
+// Cargar los sonidos
+function loadSounds() {
+  try {
+    chicharraSound = new Audio('./CHICHARRAFINAL.mp3');
+    // Precargar el sonido para reducir latencia
+    chicharraSound.load();
+    silbatoSound = new Audio('./silbato.mp3');
+    silbatoSound.load();
+  } catch (e) {
+    console.error('Error cargando los sonidos:', e);
+  }
+}
+
+// Reproducir chicharra
+function playChicharra() {
+  if (chicharraSound) {
+    chicharraSound.currentTime = 0;
+    chicharraSound.play().catch(e => console.log('Error reproduciendo chicharra:', e));
+  }
+}
+
+// Reproducir silbato
+function playSilbato() {
+  if (silbatoSound) {
+    silbatoSound.currentTime = 0;
+    silbatoSound.play().catch(e => console.log('Error reproduciendo silbato:', e));
+  }
+}
+
+/* comms */
+let bc = null;
+try { bc = new BroadcastChannel("marcador_channel"); } catch(e){ bc=null; }
+if(bc) bc.onmessage = (m)=>{ 
+  if(m.data?.type==="state") { 
+    Object.assign(state, m.data.state); 
+    applyStateToUI(); 
+    updateDisplay(); 
+  } 
+};
+
+/* storage listener for fallback */
+window.addEventListener('storage', e=>{
+  if(e.key === 'marcador_state' && e.newValue){
+    try{
+      const payload = JSON.parse(e.newValue);
+      Object.assign(state, payload.state);
+      applyStateToUI();
+      updateDisplay();
+    }catch(err){}
+  }
+});
+
+/* helpers */
+function saveState(broadcast=true){
+  const payload = { state, ts: Date.now() };
+  try{ localStorage.setItem('marcador_state', JSON.stringify(payload)); } catch(e){}
+  if(broadcast && bc) bc.postMessage({ type:"state", state });
+  updateDisplay();
+}
+
+/* UI refs */
+const name1 = document.getElementById('name1'), name2 = document.getElementById('name2');
+const file1 = document.getElementById('file1'), file2 = document.getElementById('file2');
+const url1 = document.getElementById('url1'), url2 = document.getElementById('url2');
+const preview1 = document.getElementById('preview1'), preview2 = document.getElementById('preview2');
+const quarterSelect = document.getElementById('quarterSelect');
+const customMin = document.getElementById('customMin');
+const customSec = document.getElementById('customSec');
+
+/* Display refs */
+const displayName1 = document.getElementById('display-name1');
+const displayName2 = document.getElementById('display-name2');
+const displayScore1 = document.getElementById('display-score1');
+const displayScore2 = document.getElementById('display-score2');
+const displayFouls1 = document.getElementById('display-fouls1');
+const displayFouls2 = document.getElementById('display-fouls2');
+const displayF1 = document.getElementById('display-f1');
+const displayF2 = document.getElementById('display-f2');
+const displayLogo1 = document.getElementById('display-logo1');
+const displayLogo2 = document.getElementById('display-logo2');
+const displayClock = document.getElementById('display-clock');
+const displayQuarter = document.getElementById('display-quarter');
+const displayPossession1 = document.getElementById('display-possession1');
+const displayPossession2 = document.getElementById('display-possession2');
+
+/* Actualizar visualización */
+function updateDisplay() {
+  // Nombres y puntajes
+  displayName1.textContent = state.e1;
+  displayName2.textContent = state.e2;
+  displayScore1.textContent = state.p1;
+  displayScore2.textContent = state.p2;
+  
+  // Faltas - ACTUALIZADO
+  if (displayF1 && displayF2) {
+    displayF1.textContent = state.f1;
+    displayF2.textContent = state.f2;
+  }
+  
+  // Resaltar faltas acumuladas (4 o más)
+  if (displayFouls1 && displayFouls2) {
+    displayFouls1.classList.toggle('acumulado', state.f1 >= 4);
+    displayFouls2.classList.toggle('acumulado', state.f2 >= 4);
+  }
+
+  // Logos
+  if (state.logo1) {
+    displayLogo1.innerHTML = `<img src="${state.logo1}" alt="${state.e1}" />`;
+  } else {
+    displayLogo1.innerHTML = '';
+  }
+  
+  if (state.logo2) {
+    displayLogo2.innerHTML = `<img src="${state.logo2}" alt="${state.e2}" />`;
+  } else {
+    displayLogo2.innerHTML = '';
+  }
+  
+  // Cronómetro
+  const minutes = Math.floor(state.time / 60);
+  const seconds = state.time % 60;
+  displayClock.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  
+  // Cuarto
+  const quarterNames = {
+    "1T": "1ER.T",
+    "2T": "2DO.T",
+    "3T": "3ER.T",
+    "4T": "4TO.T",
+    "OT1": "OT1",
+    "OT2": "OT2",
+    "OT3": "OT3",
+    "OT4": "OT4"
+  };
+  displayQuarter.textContent = quarterNames[state.quarter] || state.quarter;
+  
+  // Posesión - Actualizar indicadores visuales CORREGIDOS
+  if (displayPossession1 && displayPossession2) {
+    // CORRECCIÓN: Local (izquierda) = 1, Visitante (derecha) = 2
+    displayPossession1.classList.toggle('active', state.possession === 1);
+    displayPossession2.classList.toggle('active', state.possession === 2);
+  }
+}
+
+/* apply names and logos */
+function applyNamesAndLogos(){
+  state.e1 = name1.value || "Local";
+  state.e2 = name2.value || "Visitante";
+
+  if(url1.value.trim()) state.logo1 = url1.value.trim();
+  if(url2.value.trim()) state.logo2 = url2.value.trim();
+
+  saveState();
+}
+
+/* handle file uploads */
+if(file1){
+  file1.addEventListener('change', e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => { state.logo1 = ev.target.result; if(displayLogo1) displayLogo1.innerHTML = `<img src="${state.logo1}" />`; saveState(); };
+    r.readAsDataURL(f);
+  });
+}
+if(file2){
+  file2.addEventListener('change', e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => { state.logo2 = ev.target.result; if(displayLogo2) displayLogo2.innerHTML = `<img src="${state.logo2}" />`; saveState(); };
+    r.readAsDataURL(f);
+  });
+}
+
+/* points */
+function addPoints(team, pts){ if(team===1) state.p1 += pts; else state.p2 += pts; saveState(); }
+function decPoints(team){ if(team===1) state.p1 = Math.max(0, state.p1 - 1); else state.p2 = Math.max(0, state.p2 - 1); saveState(); }
+
+/* fouls */
+function addFoul(team){ if(team===1) state.f1++; else state.f2++; saveState(); }
+function decFoul(team){ if(team===1) state.f1 = Math.max(0, state.f1 - 1); else state.f2 = Math.max(0, state.f2 - 1); saveState(); }
+
+/* possession */
+function setPossession(v){ state.possession = v; saveState(); }
+
+/* quarter */
+function setQuarter(q){
+  state.quarter = q;
+  if(q.startsWith("OT")) state.time = 300;
+  else state.time = 600;
+  state.running = false;
+  saveState();
+}
+function setQuarterFromSelect(){ setQuarter(quarterSelect.value); }
+function nextQuarter(){ const order=["1T","2T","3T","4T","OT1","OT2","OT3","OT4"]; let idx=order.indexOf(state.quarter); if(idx<0) idx=0; if(idx<order.length-1) idx++; setQuarter(order[idx]); quarterSelect.value=state.quarter; }
+function prevQuarter(){ const order=["1T","2T","3T","4T","OT1","OT2","OT3","OT4"]; let idx=order.indexOf(state.quarter); if(idx<0) idx=0; if(idx>0) idx--; setQuarter(order[idx]); quarterSelect.value=state.quarter; }
+
+/* clock */
+let interval = null;
+function startClock(){
+  if(interval) return;
+  state.running = true;
+  saveState();
+  interval = setInterval(()=>{
+    if(state.time > 0){
+      state.time = Math.max(0, state.time - 1);
+      
+      // Verificar si el tiempo llegó a cero ANTES de guardar el estado
+      if(state.time === 0) {
+        playChicharra(); // Reproducir chicharra inmediatamente
+        pauseClock();
+        state.running = false;
+        clearInterval(interval); 
+        interval = null;
+      }
+      
+      saveState(false);
+      if(bc) bc.postMessage({type:"state", state});
+    }
+  }, 1000);
+}
+function pauseClock(){ if(interval){ clearInterval(interval); interval=null; } state.running=false; saveState(); }
+function stopClock(){ if(interval){ clearInterval(interval); interval=null; } state.running=false; saveState(); }
+function resetClock(){ 
+  if(state.quarter && state.quarter.startsWith('OT')) state.time=300; 
+  else state.time=600; 
+  state.running=false; 
+  if(interval){ clearInterval(interval); interval=null; } 
+  saveState(); 
+}
+
+function setCustomTime(){
+  const mins = parseInt(customMin.value) || 0;
+  const secs = parseInt(customSec.value) || 0;
+  state.time = (mins*60) + secs;
+  state.running = false;
+  if(interval){ clearInterval(interval); interval = null; }
+  saveState();
+}
+
+/* reset all */
+function resetAll(){ 
+  state = Object.assign({}, DEFAULT); 
+  // limpiar previews si existen
+  const p1 = document.getElementById('preview1');
+  const p2 = document.getElementById('preview2');
+  if(p1) p1.innerHTML = "";
+  if(p2) p2.innerHTML = "";
+  name1.value=state.e1; 
+  name2.value=state.e2; 
+  
+  saveState(); 
+}
+
+/* force send */
+function sendState(){ saveState(); }
+
+/* UI sync */
+function applyStateToUI(){
+  name1.value = state.e1;
+  name2.value = state.e2;
+  if(state.logo1){
+    const p1 = document.getElementById('preview1');
+    if(p1) p1.innerHTML = `<img src="${state.logo1}" />`;
+  }
+  if(state.logo2){
+    const p2 = document.getElementById('preview2');
+    if(p2) p2.innerHTML = `<img src="${state.logo2}" />`;
+  }
+  quarterSelect.value = state.quarter || "1T";
+  customMin.value = Math.floor(state.time/60);
+  customSec.value = state.time % 60;
+}
+
+/* load initial */
+try{
+  const raw = localStorage.getItem('marcador_state');
+  if(raw){
+    const payload = JSON.parse(raw);
+    if(payload && payload.state){ 
+      state = Object.assign({}, state, payload.state); 
+      applyStateToUI(); 
+      updateDisplay(); 
+    }
+  } else { 
+    saveState(); 
+  }
+}catch(e){ 
+  saveState(); 
+}
+
+// Cargar sonidos al iniciar
+loadSounds();
+
+// Actualizar visualización cada segundo si el cronómetro está en marcha
+setInterval(() => {
+  if (state.running && state.time > 0) {
+    updateDisplay();
+  }
+}, 1000);
+  </script>
+</body>
+</html>

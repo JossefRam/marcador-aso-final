@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Control de Reloj de Tiro - Árbitro</title>
+<style>
+  :root {
+    --bg: #1a1a1a;
+    --panel: #2d2d2d;
+    --accent: #ffa200;
+    --text: #fff;
+    --button-bg: #3d3d3d;
+    --button-hover: #4a4a4a;
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .header {
+    background: var(--accent);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    font-size: 1.8rem;
+    font-weight: bold;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+  
+  .container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 30px;
+  }
+  
+  .shot-clock-display {
+    background: var(--panel);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    border: 3px solid var(--accent);
+    min-width: 300px;
+  }
+  
+  .shot-clock-label {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  
+  .shot-clock-time {
+    font-size: 4.5rem;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    letter-spacing: 2px;
+  }
+  
+  .shot-clock-milliseconds {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+    opacity: 0.8;
+    margin-left: 5px;
+  }
+  
+  .shot-clock-time.warning,
+  .shot-clock-milliseconds.warning {
+    color: #ff0000;
+    animation: pulse 1s infinite;
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+  
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    max-width: 400px;
+    width: 100%;
+  }
+  
+  .control-btn {
+    background: var(--button-bg);
+    border: none;
+    border-radius: 15px;
+    padding: 25px 15px;
+    color: var(--text);
+    font-size: 1.3rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+  
+  .control-btn:hover {
+    background: var(--button-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
+  
+  .control-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+  
+  .btn-14 {
+    background: linear-gradient(135deg, #4a6fc3, #3a5cb0);
+  }
+  
+  .btn-24 {
+    background: linear-gradient(135deg, #00ffe1, #00fff2);
+  }
+  
+  .btn-start {
+    background: linear-gradient(135deg, #00ff2f, #00ff1e);
+  }
+  
+  .btn-pause {
+    background: linear-gradient(135deg, #ffa200, #e69100);
+  }
+  
+  .btn-reset {
+    background: linear-gradient(135deg, #ff6b6b, #e55a5a);
+  }
+  
+  .instructions {
+    background: var(--panel);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+  
+  .instructions h3 {
+    margin-bottom: 10px;
+    color: var(--accent);
+  }
+  
+  .key {
+    display: inline-block;
+    background: #444;
+    border: 1px solid #666;
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin: 0 2px;
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+  
+  .status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.1);
+    font-size: 0.9rem;
+  }
+  
+  @media (max-width: 480px) {
+    .header {
+      font-size: 1.5rem;
+      padding: 15px;
+    }
+    
+    .shot-clock-display {
+      padding: 30px;
+      min-width: 250px;
+    }
+    
+    .shot-clock-time {
+      font-size: 3.5rem;
+    }
+    
+    .shot-clock-milliseconds {
+      font-size: 1.5rem;
+    }
+    
+    .control-btn {
+      padding: 20px 10px;
+      font-size: 1.1rem;
+    }
+    
+    .controls {
+      grid-template-columns: 1fr;
+      max-width: 300px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    🏀 CONTROL DE RELOJ DE TIRO
+  </div>
+  
+  <div class="container">
+    <div class="shot-clock-display">
+      <div class="shot-clock-label">TIEMPO DE TIRO</div>
+      <div>
+        <span class="shot-clock-time" id="shot-clock-display">--</span>
+        <span class="shot-clock-milliseconds" id="shot-clock-milliseconds"></span>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <button class="control-btn btn-14" onclick="startShotClock(14)">14 SEGUNDOS</button>
+      <button class="control-btn btn-24" onclick="startShotClock(24)">24 SEGUNDOS</button>
+      <button class="control-btn btn-start" onclick="resumeShotClock()">INICIAR</button>
+      <button class="control-btn btn-pause" onclick="pauseShotClock()">PAUSAR</button>
+      <button class="control-btn btn-reset" onclick="resetShotClock()">REINICIAR</button>
+    </div>
+    
+    <div class="instructions">
+      <h3>CONTROLES RÁPIDOS</h3>
+      <p>
+        <span class="key">1</span> = 14 segundos &nbsp;&nbsp;
+        <span class="key">2</span> = 24 segundos<br>
+        <span class="key">3</span> = Iniciar &nbsp;&nbsp;
+        <span class="key">4</span> = Pausar &nbsp;&nbsp;
+        <span class="key">5</span> = Reiniciar
+      </p>
+      <div class="status" id="connection-status">
+        🔄 Conectando...
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let shotClockState = {
+      shotClockTime: 0,
+      shotClockMilliseconds: 0,
+      shotClockRunning: false
+    };
+    
+    let shotClockInterval = null;
+    let shotClockBC = null;
+    let lastUpdateTime = 0;
+    let soundEnabled = true;
+    
+    // Elementos del DOM
+    const shotClockDisplay = document.getElementById('shot-clock-display');
+    const shotClockMilliseconds = document.getElementById('shot-clock-milliseconds');
+    const connectionStatus = document.getElementById('connection-status');
+    
+    // Cargar sonido de silbato
+    let silbatoSound = null;
+    function loadSilbatoSound() {
+      try {
+        silbatoSound = new Audio('./silbato.mp3');
+        silbatoSound.preload = 'auto';
+        console.log('Sonido de silbato cargado');
+      } catch(e) {
+        console.warn('No se pudo cargar el sonido de silbato:', e);
+        soundEnabled = false;
+      }
+    }
+    
+    // Reproducir silbato
+    function playSilbato() {
+      if (soundEnabled && silbatoSound) {
+        try {
+          silbatoSound.currentTime = 0;
+          silbatoSound.play().catch(e => console.log('Error reproduciendo silbato:', e));
+        } catch(e) {
+          console.log('Error con el sonido:', e);
+        }
+      }
+    }
+    
+    // Inicializar comunicación
+    function initializeCommunication() {
+      try {
+        shotClockBC = new BroadcastChannel("shot_clock_channel");
+        connectionStatus.innerHTML = "✅ Conectado al marcador";
+        connectionStatus.style.background = "rgba(13, 176, 75, 0.2)";
+        console.log('Canal de reloj de tiro conectado correctamente');
+      } catch(e) {
+        console.error('Error con BroadcastChannel:', e);
+        connectionStatus.innerHTML = "⚠️ Usando conexión local";
+        connectionStatus.style.background = "rgba(255, 173, 0, 0.2)";
+      }
+    }
+    
+    // Actualizar display del reloj de tiro con milésimas
+    function updateShotClockDisplay() {
+      if (shotClockDisplay && shotClockMilliseconds) {
+        if (shotClockState.shotClockTime > 0 || shotClockState.shotClockMilliseconds > 0) {
+          // Mostrar segundos completos
+          shotClockDisplay.textContent = shotClockState.shotClockTime.toString().padStart(2, '0');
+          
+          // Mostrar milésimas (3 dígitos)
+          const milliseconds = shotClockState.shotClockMilliseconds.toString().padStart(3, '0').substring(0, 2);
+          shotClockMilliseconds.textContent = '.' + milliseconds;
+          
+          // Aplicar advertencia visual
+          const isWarning = shotClockState.shotClockTime <= 5 && (shotClockState.shotClockTime > 0 || shotClockState.shotClockMilliseconds > 0);
+          shotClockDisplay.classList.toggle('warning', isWarning);
+          shotClockMilliseconds.classList.toggle('warning', isWarning);
+        } else {
+          shotClockDisplay.textContent = '--';
+          shotClockMilliseconds.textContent = '';
+          shotClockDisplay.classList.remove('warning');
+          shotClockMilliseconds.classList.remove('warning');
+        }
+      }
+    }
+    
+    // Funciones del reloj de tiro con milésimas
+    function startShotClock(seconds) {
+      if (shotClockInterval) {
+        clearInterval(shotClockInterval);
+        shotClockInterval = null;
+      }
+      
+      shotClockState.shotClockTime = seconds;
+      shotClockState.shotClockMilliseconds = 0;
+      shotClockState.shotClockRunning = true;
+      lastUpdateTime = Date.now();
+      
+      updateShotClockDisplay();
+      sendShotClockState();
+      
+      shotClockInterval = setInterval(updateShotClockWithMilliseconds, 10);
+    }
+    
+    // Función principal de actualización con milésimas
+    function updateShotClockWithMilliseconds() {
+      if (shotClockState.shotClockRunning) {
+        const currentTime = Date.now();
+        const elapsed = currentTime - lastUpdateTime;
+        
+        if (elapsed >= 10) {
+          const millisecondsToSubtract = Math.floor(elapsed);
+          lastUpdateTime = currentTime;
+          
+          // Convertir todo a milésimas para hacer la resta
+          let totalMilliseconds = (shotClockState.shotClockTime * 1000) + shotClockState.shotClockMilliseconds;
+          totalMilliseconds = Math.max(0, totalMilliseconds - millisecondsToSubtract);
+          
+          // Convertir de vuelta a segundos y milésimas
+          shotClockState.shotClockTime = Math.floor(totalMilliseconds / 1000);
+          shotClockState.shotClockMilliseconds = totalMilliseconds % 1000;
+          
+          updateShotClockDisplay();
+          
+          // Verificar si llegó a cero
+          if (totalMilliseconds <= 0) {
+            shotClockState.shotClockRunning = false;
+            if (shotClockInterval) {
+              clearInterval(shotClockInterval);
+              shotClockInterval = null;
+            }
+            // Reproducir silbato cuando llega a cero
+            playSilbato();
+          }
+          
+          sendShotClockState();
+        }
+      }
+    }
+    
+    function resumeShotClock() {
+      if ((shotClockState.shotClockTime > 0 || shotClockState.shotClockMilliseconds > 0) && !shotClockState.shotClockRunning) {
+        shotClockState.shotClockRunning = true;
+        lastUpdateTime = Date.now();
+        
+        if (shotClockInterval) {
+          clearInterval(shotClockInterval);
+          shotClockInterval = null;
+        }
+        
+        shotClockInterval = setInterval(updateShotClockWithMilliseconds, 10);
+        sendShotClockState();
+      }
+    }
+    
+    function pauseShotClock() {
+      shotClockState.shotClockRunning = false;
+      if (shotClockInterval) {
+        clearInterval(shotClockInterval);
+        shotClockInterval = null;
+      }
+      updateShotClockDisplay();
+      sendShotClockState();
+    }
+    
+    function resetShotClock() {
+      shotClockState.shotClockTime = 0;
+      shotClockState.shotClockMilliseconds = 0;
+      shotClockState.shotClockRunning = false;
+      if (shotClockInterval) {
+        clearInterval(shotClockInterval);
+        shotClockInterval = null;
+      }
+      updateShotClockDisplay();
+      sendShotClockState();
+    }
+    
+    // Enviar estado del reloj de tiro (CON MILISEGUNDOS)
+    function sendShotClockState() {
+      const shotClockPayload = { 
+        type: "shot_clock",
+        shotClockTime: shotClockState.shotClockTime,
+        shotClockMilliseconds: shotClockState.shotClockMilliseconds,
+        shotClockRunning: shotClockState.shotClockRunning
+      };
+      
+      if (shotClockBC) {
+        try {
+          shotClockBC.postMessage(shotClockPayload);
+        } catch(e) {
+          console.error('Error enviando mensaje:', e);
+        }
+      }
+      
+      try {
+        localStorage.setItem('shot_clock_state', JSON.stringify(shotClockPayload));
+      } catch(e) {
+        console.error('Error saving to localStorage:', e);
+      }
+    }
+    
+    // Control por teclado
+    function setupKeyboardControls() {
+      document.addEventListener('keydown', function(event) {
+        switch(event.key) {
+          case '1':
+            event.preventDefault();
+            startShotClock(14);
+            break;
+          case '2':
+            event.preventDefault();
+            startShotClock(24);
+            break;
+          case '3':
+            event.preventDefault();
+            resumeShotClock();
+            break;
+          case '4':
+            event.preventDefault();
+            pauseShotClock();
+            break;
+          case '5':
+            event.preventDefault();
+            resetShotClock();
+            break;
+        }
+      });
+    }
+    
+    // Cargar estado inicial
+    function loadInitialState() {
+      try {
+        const raw = localStorage.getItem('shot_clock_state');
+        if (raw) {
+          const payload = JSON.parse(raw);
+          if (payload && payload.type === "shot_clock") {
+            shotClockState.shotClockTime = payload.shotClockTime || 0;
+            shotClockState.shotClockMilliseconds = payload.shotClockMilliseconds || 0;
+            shotClockState.shotClockRunning = payload.shotClockRunning || false;
+            updateShotClockDisplay();
+          }
+        }
+      } catch(e) {
+        console.error('Error loading initial state:', e);
+      }
+    }
+    
+    // Inicializar
+    window.addEventListener('load', function() {
+      loadSilbatoSound();
+      initializeCommunication();
+      setupKeyboardControls();
+      loadInitialState();
+    });
+  </script>
+</body>
+</html>

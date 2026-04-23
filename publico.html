@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Marcador - Pantalla</title>
+<style>
+  :root{
+    --accent:#0db04b;
+    --muted: rgba(255,255,255,0.12);
+    --danger: #ff4d4d;
+    --shot-clock: #ff6b6b;
+  }
+  html,body{
+    height:100%;
+    margin:0;
+    color:#fff;
+    font-family: "Segoe UI", Roboto, Arial;
+
+  }
+  #video-bg{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2;
+}
+
+.overlay{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5); /* puedes subir a 0.6 o 0.7 */
+  z-index: -1;
+}
+  .wrap{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    padding:20px;
+    box-sizing:border-box;
+  }
+  .board{
+    width:100%;
+    max-width:1400px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background: rgba(0,0,0,0.4);
+    padding:30px;
+    border-radius:12px;
+    box-shadow:0 6px 30px rgba(0,0,0,0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .team {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+    min-width:220px;
+  }
+  .teamTop{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+    justify-content:center;
+  }
+  .logo{
+    width:300px;
+    height:300px;
+    border-radius:8px;
+    background:var(--muted);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .logo img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+  }
+  .name{
+    font-size:3rem;
+    font-weight:700;
+    text-align:center;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+  }
+  .score{
+    font-size:12rem;
+    font-weight:900;
+    letter-spacing:4px;
+    color: #fff;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+  }
+  .fouls{
+    font-size:4rem;
+    margin-top:10px;
+    font-weight:700;
+    color: #fff;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+  }
+  .fouls.acumulado{
+    color:var(--danger);
+    font-weight:800;
+  }
+
+  .tri-right {
+    width:0;
+    height:0;
+    border-top:30px solid transparent;
+    border-bottom:30px solid transparent;
+    border-right:50px solid rgba(255,255,255,0.15);
+    transition: border-right-color .18s ease, transform .15s;
+  }
+  .tri-right.active {
+    border-right-color:var(--accent);
+    transform: scale(1.05);
+  }
+
+  .tri-left {
+    width:0;
+    height:0;
+    border-top:30px solid transparent;
+    border-bottom:30px solid transparent;
+    border-left:50px solid rgba(255,255,255,0.15);
+    transition: border-left-color .18s ease, transform .15s;
+  }
+  .tri-left.active {
+    border-left-color:var(--accent);
+    transform: scale(1.05);
+  }
+
+  .center {
+    flex:0 0 420px;
+    text-align:center;
+    padding:8px;
+  }
+  .center img {
+    max-width: 300px;
+    height: auto;
+    margin-bottom: 10px;
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .clock{
+    font-size:12rem;
+    font-weight:900;
+    transition: color .3s ease;
+    color: #fff;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+  }
+  .clock.warning {
+    color: #ff0000;
+    animation: pulse-clock 1s infinite;
+  }
+  @keyframes pulse-clock {
+    0% { opacity: 1; }
+    50% { opacity: 0.8; }
+    100% { opacity: 1; }
+  }
+  .quarter{
+    font-size:5rem;
+    margin-top:8px;
+    padding:8px 12px;
+    border-radius:8px;
+    display:inline-block;
+    color: #fff;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .shot-clock-container {
+    margin-top: 20px;
+    text-align: center;
+  }
+  .shot-clock-label {
+    font-size: 2.5rem;
+    color: #fff;
+    margin-bottom: 5px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+    font-weight: 700;
+  }
+  .shot-clock-time-wrapper {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+  }
+  .shot-clock-time {
+    font-size: 6rem;
+    font-weight: 900;
+    color: var(--shot-clock);
+    text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.9);
+    transition: color 0.3s ease;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .shot-clock-milliseconds {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--shot-clock);
+    opacity: 0.8;
+    margin-left: 2px;
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.8);
+    line-height: 1;
+  }
+  .shot-clock-time.warning,
+  .shot-clock-milliseconds.warning {
+    color: #ff0000;
+    animation: pulse 0.8s infinite;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.02); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  @media(max-width:900px){
+    .board{
+      flex-direction:column;
+      gap:18px;
+      padding:18px;
+    }
+    .center{order:3}
+    .team{order:2}
+    .name{font-size:2rem}
+    .score{font-size:6rem}
+    .fouls{font-size:2rem}
+    .clock{font-size:6rem}
+    .quarter{font-size:2.5rem}
+    .logo{width:150px;height:150px}
+    .tri-right, .tri-left { transform:scale(0.8); }
+    .tri-right.active, .tri-left.active { transform:scale(0.85); }
+    
+    .shot-clock-label { font-size: 1.8rem; }
+    .shot-clock-time { font-size: 4rem; }
+    .shot-clock-milliseconds { font-size: 2rem; }
+  }
+
+  @media(max-width:480px){
+    .shot-clock-label { font-size: 1.5rem; }
+    .shot-clock-time { font-size: 3rem; }
+    .shot-clock-milliseconds { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+  <!-- VIDEO DE FONDO -->
+<video autoplay muted loop playsinline id="video-bg">
+  <source src="./video.mp4" type="video/mp4">
+</video>
+
+<!-- CAPA OSCURA -->
+<div class="overlay"></div>
+  <div class="wrap">
+    <div class="board">
+      <div class="team">
+        <div class="teamTop">
+          <div class="tri-right" id="possession2"></div>
+          <div class="logo" id="logo2"></div>
+        </div>
+        <div class="name" id="name2">Visitante</div>
+        <div class="score" id="score2">0</div>
+        <div class="fouls" id="fouls2">Faltas: <span id="f2">0</span></div>
+      </div>
+
+      <div class="center">
+        <img src="./aso.png" alt="Logo" />
+        <div class="clock" id="clock">10:00</div>
+        <div class="quarter" id="quarter">1ER.T</div>
+        
+        <div class="shot-clock-container">
+          <div class="shot-clock-label">TIRO</div>
+          <div class="shot-clock-time-wrapper">
+            <div class="shot-clock-time" id="shot-clock-time">--</div>
+            <div class="shot-clock-milliseconds" id="shot-clock-milliseconds"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="team">
+        <div class="teamTop">
+          <div class="logo" id="logo1"></div>
+          <div class="tri-left" id="possession1"></div>
+        </div>
+        <div class="name" id="name1">Local</div>
+        <div class="score" id="score1">0</div>
+        <div class="fouls" id="fouls1">Faltas: <span id="f1">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT = {
+      e1:"Local", e2:"Visitante",
+      p1:0, p2:0,
+      f1:0, f2:0,
+      logo1:null, logo2:null,
+      possession:0,
+      time:600,
+      running:false,
+      quarter:"1T",
+      shotClockTime: 0,
+      shotClockMilliseconds: 0,
+      shotClockRunning: false
+    };
+    let state = Object.assign({}, DEFAULT);
+
+    // Variables para sonidos
+    let silbatoSound = null;
+    let soundEnabled = true;
+
+    // Elementos del DOM
+    const name1 = document.getElementById('name1'), name2 = document.getElementById('name2');
+    const score1 = document.getElementById('score1'), score2 = document.getElementById('score2');
+    const fouls1 = document.getElementById('fouls1'), fouls2 = document.getElementById('fouls2');
+    const f1 = document.getElementById('f1'), f2 = document.getElementById('f2');
+    const logo1 = document.getElementById('logo1'), logo2 = document.getElementById('logo2');
+    const clock = document.getElementById('clock'), quarter = document.getElementById('quarter');
+    const possession1 = document.getElementById('possession1'), possession2 = document.getElementById('possession2');
+    const shotClockTime = document.getElementById('shot-clock-time');
+    const shotClockMilliseconds = document.getElementById('shot-clock-milliseconds');
+
+    // Variables para el reloj de tiro
+    let shotClockBC = null;
+    let lastShotClockUpdate = 0;
+    let shotClockLastTotalMillis = 0;
+    let shotClockZeroTimeout = null;
+
+    // Cargar sonido de silbato
+    function loadSilbatoSound() {
+      try {
+        silbatoSound = new Audio('./silbato.mp3');
+        silbatoSound.preload = 'auto';
+        console.log('Sonido de silbato cargado');
+      } catch(e) {
+        console.warn('No se pudo cargar el sonido de silbato:', e);
+        soundEnabled = false;
+      }
+    }
+
+    // Reproducir silbato
+    function playSilbato() {
+      if (soundEnabled && silbatoSound) {
+        try {
+          silbatoSound.currentTime = 0;
+          silbatoSound.play().catch(e => console.log('Error reproduciendo silbato:', e));
+        } catch(e) {
+          console.log('Error con el sonido:', e);
+        }
+      }
+    }
+
+    // Comunicación entre pestañas - MARCADOR PRINCIPAL
+    let bc = null;
+    try { 
+      bc = new BroadcastChannel("marcador_channel"); 
+      console.log('Canal del marcador conectado');
+    } catch(e){ 
+      bc=null; 
+      console.error('Error con el canal del marcador:', e);
+    }
+    
+    if(bc) bc.onmessage = (m)=>{ 
+      if(m.data?.type==="state") { 
+        Object.assign(state, m.data.state); 
+        updateUI(); 
+      } 
+    };
+
+    // Comunicación para reloj de tiro - CORREGIDO
+    function initializeShotClockCommunication() {
+      try {
+        shotClockBC = new BroadcastChannel("shot_clock_channel");
+        shotClockBC.onmessage = (m)=>{ 
+          if(m.data?.type==="shot_clock") { 
+            const now = Date.now();
+            
+            // Actualizar cada 10ms máximo
+            if (now - lastShotClockUpdate > 10) {
+              lastShotClockUpdate = now;
+              
+              // Calcular milisegundos totales actuales
+              const currentTotalMillis = (m.data.shotClockTime * 1000) + (m.data.shotClockMilliseconds || 0);
+              
+              // Verificar si acaba de llegar a cero
+              if (shotClockLastTotalMillis > 0 && currentTotalMillis <= 0) {
+                // Limpiar timeout anterior si existe
+                if (shotClockZeroTimeout) {
+                  clearTimeout(shotClockZeroTimeout);
+                }
+                
+                // Reproducir silbato inmediatamente
+                playSilbato();
+                
+                // Forzar display en 0
+                shotClockTime.textContent = '00';
+                shotClockMilliseconds.textContent = '.00';
+                shotClockTime.classList.add('warning');
+                shotClockMilliseconds.classList.add('warning');
+              } 
+              // Si todavía hay tiempo
+              else if (currentTotalMillis > 0) {
+                updateShotClockDisplay(m.data);
+              }
+              
+              shotClockLastTotalMillis = currentTotalMillis;
+            }
+          } 
+        };
+        console.log('Canal de reloj de tiro conectado correctamente');
+      } catch(e) {
+        console.error('Error con canal de reloj de tiro:', e);
+      }
+    }
+
+    // Actualizar display del reloj de tiro - MEJORADO
+    function updateShotClockDisplay(shotClockData) {
+      if (!shotClockTime || !shotClockMilliseconds || !shotClockData) return;
+      
+      const seconds = shotClockData.shotClockTime || 0;
+      const millis = shotClockData.shotClockMilliseconds || 0;
+      
+      if (seconds > 0 || millis > 0) {
+        // Mostrar segundos
+        shotClockTime.textContent = seconds.toString().padStart(2, '0');
+        
+        // Mostrar centésimas (2 dígitos)
+        const centiseconds = Math.floor(millis / 10);
+        shotClockMilliseconds.textContent = '.' + centiseconds.toString().padStart(2, '0');
+        
+        // Aplicar advertencia visual
+        const isWarning = seconds <= 5;
+        shotClockTime.classList.toggle('warning', isWarning);
+        shotClockMilliseconds.classList.toggle('warning', isWarning);
+      } else {
+        // Mostrar 0.00 cuando está en cero
+        shotClockTime.textContent = '00';
+        shotClockMilliseconds.textContent = '.00';
+        shotClockTime.classList.add('warning');
+        shotClockMilliseconds.classList.add('warning');
+      }
+    }
+
+    // Listener para localStorage del reloj de tiro
+    function setupShotClockStorageListener() {
+      window.addEventListener('storage', e=>{
+        if(e.key === 'shot_clock_state' && e.newValue){
+          try{
+            const payload = JSON.parse(e.newValue);
+            if(payload && payload.type === "shot_clock") {
+              const now = Date.now();
+              if (now - lastShotClockUpdate > 10) {
+                lastShotClockUpdate = now;
+                
+                const currentTotalMillis = (payload.shotClockTime * 1000) + (payload.shotClockMilliseconds || 0);
+                
+                if (shotClockLastTotalMillis > 0 && currentTotalMillis <= 0) {
+                  playSilbato();
+                  shotClockTime.textContent = '00';
+                  shotClockMilliseconds.textContent = '.00';
+                  shotClockTime.classList.add('warning');
+                  shotClockMilliseconds.classList.add('warning');
+                } else if (currentTotalMillis > 0) {
+                  updateShotClockDisplay(payload);
+                }
+                
+                shotClockLastTotalMillis = currentTotalMillis;
+              }
+            }
+          }catch(err){
+            console.error('Error procesando storage del reloj de tiro:', err);
+          }
+        }
+      });
+    }
+
+    // Listener para localStorage del marcador principal
+    window.addEventListener('storage', e=>{
+      if(e.key === 'marcador_state' && e.newValue){
+        try{
+          const payload = JSON.parse(e.newValue);
+          Object.assign(state, payload.state);
+          updateUI();
+        }catch(err){
+          console.error('Error procesando storage del marcador:', err);
+        }
+      }
+    });
+
+    // Actualizar la interfaz completa
+    function updateUI() {
+      // Nombres y puntajes
+      name1.textContent = state.e1;
+      name2.textContent = state.e2;
+      score1.textContent = state.p1;
+      score2.textContent = state.p2;
+      
+      // Faltas
+      f1.textContent = state.f1;
+      f2.textContent = state.f2;
+      
+      // Resaltar faltas acumuladas
+      fouls1.classList.toggle('acumulado', state.f1 >= 4);
+      fouls2.classList.toggle('acumulado', state.f2 >= 4);
+
+      // Logos
+      if (state.logo1) {
+        logo1.innerHTML = `<img src="${state.logo1}" alt="${state.e1}" />`;
+      } else {
+        logo1.innerHTML = '';
+      }
+      
+      if (state.logo2) {
+        logo2.innerHTML = `<img src="${state.logo2}" alt="${state.e2}" />`;
+      } else {
+        logo2.innerHTML = '';
+      }
+      
+      // Cronómetro principal
+      const minutes = Math.floor(state.time / 60);
+      const seconds = state.time % 60;
+      clock.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      // Cambiar a rojo cuando queden 10 segundos o menos
+      if (state.time <= 10) {
+        clock.classList.add('warning');
+      } else {
+        clock.classList.remove('warning');
+      }
+      
+      // Cuarto
+      const quarterNames = {
+        "1T": "1ER.T",
+        "2T": "2DO.T",
+        "3T": "3ER.T",
+        "4T": "4TO.T",
+        "OT1": "OT1",
+        "OT2": "OT2",
+        "OT3": "OT3",
+        "OT4": "OT4"
+      };
+      quarter.textContent = quarterNames[state.quarter] || state.quarter;
+      
+      // Posesión
+      if (possession1 && possession2) {
+        possession1.classList.toggle('active', state.possession === 1);
+        possession2.classList.toggle('active', state.possession === 2);
+      }
+    }
+
+    // Cargar estado inicial del marcador
+    function loadInitialState() {
+      try{
+        const raw = localStorage.getItem('marcador_state');
+        if(raw){
+          const payload = JSON.parse(raw);
+          if(payload && payload.state){ 
+            state = Object.assign({}, state, payload.state); 
+            updateUI(); 
+          }
+        }
+      }catch(e){
+        console.error('Error cargando estado inicial del marcador:', e);
+      }
+    }
+
+    // Cargar estado inicial del reloj de tiro
+    function loadInitialShotClockState() {
+      try{
+        const rawShotClock = localStorage.getItem('shot_clock_state');
+        if(rawShotClock){
+          const payload = JSON.parse(rawShotClock);
+          if(payload && payload.type === "shot_clock") {
+            const totalMillis = (payload.shotClockTime * 1000) + (payload.shotClockMilliseconds || 0);
+            shotClockLastTotalMillis = totalMillis;
+            
+            if (totalMillis > 0) {
+              updateShotClockDisplay(payload);
+            } else {
+              shotClockTime.textContent = '00';
+              shotClockMilliseconds.textContent = '.00';
+              shotClockTime.classList.add('warning');
+              shotClockMilliseconds.classList.add('warning');
+            }
+          }
+        }
+      }catch(e){
+        console.error('Error cargando estado inicial del reloj de tiro:', e);
+      }
+    }
+
+    // Inicializar todo
+    function initialize() {
+      loadSilbatoSound();
+      initializeShotClockCommunication();
+      setupShotClockStorageListener();
+      loadInitialState();
+      loadInitialShotClockState();
+      
+      // Asegurarse de que el display inicial sea correcto
+      if (shotClockTime.textContent === '--') {
+        shotClockTime.textContent = '--';
+        shotClockMilliseconds.textContent = '';
+      }
+    }
+
+    // Inicializar cuando cargue la página
+    window.addEventListener('load', initialize);
+
+    // Actualizar cada segundo si el cronómetro está en marcha
+    setInterval(() => {
+      if (state.running && state.time > 0) {
+        updateUI();
+      }
+    }, 1000);
+  </script>
+</body>
+</html>
