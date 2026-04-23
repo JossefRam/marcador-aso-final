@@ -1,767 +1,103 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Overlay Compacto Baloncesto</title>
+<title>Overlay Marcador</title>
+
 <style>
-  :root {
-    --team1-color: #FF4444;    /* Rojo para equipo 1 */
-    --team2-color: #4444FF;    /* Azul para equipo 2 */
-    --bg-dark: #0A0A0F;
-    --bg-panel: #1A1A24;
-    --accent: #FFC107;
-    --text-primary: #FFFFFF;
-    --text-secondary: #B0B0C0;
-    --warning: #FF5252;
-    --success: #00C853;
-    --border: #2A2A3A;
-  }
-  
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  body {
-    font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
-    background: transparent;
-    color: var(--text-primary);
-    overflow: hidden;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  /* Overlay compacto estilo barra */
-  .compact-overlay {
-    width: 800px;
-    height: 150px; /* Aumentado de 120px a 150px */
-    background: linear-gradient(145deg, #0F0F1A, #1A1A24);
-    border-radius: 10px;
-    border: 2px solid var(--border);
-    box-shadow: 
-      0 0 15px rgba(0, 0, 0, 0.8),
-      0 0 0 1px rgba(255, 255, 255, 0.05);
-    display: flex;
-    overflow: hidden;
-    position: relative;
-  }
-  
-  /* Línea decorativa superior */
-  .compact-overlay::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, 
-      var(--team1-color) 0%, 
-      var(--accent) 50%, 
-      var(--team2-color) 100%);
-  }
-  
-  /* Sección equipo local */
-  .team-section {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-  }
-  
-  .team-section.left {
-    background: linear-gradient(90deg, rgba(255, 68, 68, 0.08), transparent);
-  }
-  
-  .team-section.right {
-    background: linear-gradient(90deg, transparent, rgba(68, 68, 255, 0.08));
-    flex-direction: row-reverse;
-  }
-  
-  /* Logo pequeño - MODIFICADO SOLO TAMAÑO */
-  .compact-logo {
-    width: 120px; /* Aumentado de 45px a 120px */
-    height: 120px; /* Aumentado de 45px a 120px */
-    border-radius: 6px;
-    overflow: hidden;
-    background: rgba(0, 0, 0, 0.4);
-    border: 2px solid;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 15px;
-    flex-shrink: 0;
-  }
-  
-  .compact-logo.left {
-    border-color: var(--team1-color);
-  }
-  
-  .compact-logo.right {
-    border-color: var(--team2-color);
-  }
-  
-  .compact-logo img {
-    width: 90%; /* Aumentado de 80% a 90% */
-    height: 90%; /* Aumentado de 80% a 90% */
-    object-fit: contain;
-  }
-  
-  .logo-placeholder {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 3.5rem; /* Aumentado de 1.1rem a 3.5rem */
-    font-weight: bold;
-  }
-  
-  /* Información del equipo */
-  .team-info {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .team-section.right .team-info {
-    align-items: flex-end;
-    text-align: right;
-  }
-  
-  .team-name-compact {
-    font-size: 1.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 3px;
-  }
-  
-  .team-name-compact.left {
-    color: var(--team1-color);
-  }
-  
-  .team-name-compact.right {
-    color: var(--team2-color);
-  }
-  
-  .team-score-compact {
-    font-size: 3.5rem; /* Aumentado de 3rem a 3.5rem */
-    font-weight: 900;
-    line-height: 1;
-    text-shadow: 0 3px 8px rgba(0, 0, 0, 0.8); /* Sombra más pronunciada */
-  }
-  
-  /* Sección central - AJUSTADA COMO EN TU IMAGEN */
-  .center-section {
-    width: 220px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.3);
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-    padding: 10px 0;
-  }
-  
-  /* Cronómetro principal */
-  .main-clock-compact {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    letter-spacing: 2px;
-    margin-bottom: 8px;
-    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
-  }
-  
-  .main-clock-compact.warning {
-    color: var(--warning);
-    animation: pulse-warning 1s infinite;
-  }
-  
-  /* Información del periodo */
-  .period-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-  }
-  
-  .period-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  
-  .fouls-display {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text-secondary);
-  }
-  
-  .fouls-display.highlight {
-    color: var(--warning);
-    animation: pulse-warning 1.5s infinite;
-  }
-  
-  /* Indicador de posesión */
-  .possession-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 8px rgba(255, 193, 7, 0.8);
-    margin-top: 8px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-  
-  .possession-indicator.active {
-    opacity: 1;
-  }
-  
-  /* Animaciones */
-  @keyframes pulse-warning {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
-  }
-  
-  /* Configuración */
-  .config-button {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: var(--accent);
-    color: #000;
-    border: none;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-  }
-  
-  .config-button:hover {
-    opacity: 1;
-    transform: scale(1.1);
-  }
-  
-  .config-panel {
-    position: absolute;
-    top: 40px;
-    right: 8px;
-    background: rgba(10, 10, 15, 0.95);
-    border: 2px solid var(--accent);
-    border-radius: 8px;
-    padding: 15px;
-    width: 280px;
-    display: none;
-    z-index: 100;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
-  }
-  
-  .config-panel.active {
-    display: block;
-  }
-  
-  .config-group {
-    margin-bottom: 12px;
-  }
-  
-  .config-group label {
-    display: block;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    margin-bottom: 4px;
-    font-weight: 600;
-  }
-  
-  .config-input {
-    width: 100%;
-    padding: 7px 9px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 5px;
-    color: var(--text-primary);
-    font-size: 0.85rem;
-  }
-  
-  .config-buttons {
-    display: flex;
-    gap: 8px;
-    margin-top: 15px;
-  }
-  
-  .config-btn {
-    flex: 1;
-    padding: 7px;
-    border: none;
-    border-radius: 5px;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.85rem;
-  }
-  
-  .config-btn.primary {
-    background: var(--accent);
-    color: #000;
-  }
-  
-  .config-btn.secondary {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text-primary);
-  }
-  
-  .file-input-wrapper {
-    margin-top: 6px;
-  }
-  
-  .file-input-label {
-    display: block;
-    padding: 6px;
-    background: rgba(255, 68, 68, 0.1);
-    border: 1px dashed var(--team1-color);
-    border-radius: 5px;
-    text-align: center;
-    color: var(--team1-color);
-    font-size: 0.8rem;
-    cursor: pointer;
-  }
-  
-  .file-input-label.team2 {
-    background: rgba(68, 68, 255, 0.1);
-    border-color: var(--team2-color);
-    color: var(--team2-color);
-  }
+body {
+  margin: 0;
+  background: transparent;
+  font-family: Arial;
+}
+
+.overlay {
+  width: 800px;
+  height: 150px;
+  margin: auto;
+  margin-top: 20px;
+  display: flex;
+  background: #111;
+  border-radius: 10px;
+  color: white;
+  overflow: hidden;
+}
+
+.team {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.score {
+  font-size: 60px;
+  font-weight: bold;
+}
+
+.center {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+}
+
+.time {
+  font-size: 40px;
+}
+
+.period {
+  color: yellow;
+}
 </style>
 </head>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-
-<script>
-  const socket = io("https://marcador-aso-final.onrender.com", {
-  transports: ["websocket"],
-});
-
-  socket.on("updateScore", (data) => {
-    document.getElementById("local").innerText = data.local;
-    document.getElementById("visita").innerText = data.visita;
-  });
-</script>
 
 <body>
-  <!-- Botón de configuración -->
-  <button class="config-button" id="configButton">⚙️</button>
-  
-  <!-- Panel de configuración -->
-  <div class="config-panel" id="configPanel">
-    <h3 style="color: var(--accent); margin-bottom: 12px; text-align: center; font-size: 1rem;">CONFIGURAR</h3>
-    
-    <div class="config-group">
-      <label for="team1Name">Equipo Local</label>
-      <input type="text" id="team1Name" class="config-input" placeholder="Ej: AUS">
-      
-      <div class="file-input-wrapper">
-        <div class="file-input-label" id="team1FileLabel">📤 Logo Local</div>
-        <input type="file" id="team1File" accept="image/*" style="display: none;">
-      </div>
-    </div>
-    
-    <div class="config-group">
-      <label for="team2Name">Equipo Visitante</label>
-      <input type="text" id="team2Name" class="config-input" placeholder="Ej: NZ">
-      
-      <div class="file-input-wrapper">
-        <div class="file-input-label team2" id="team2FileLabel">📤 Logo Visitante</div>
-        <input type="file" id="team2File" accept="image/*" style="display: none;">
-      </div>
-    </div>
-    
-    <div class="config-buttons">
-      <button class="config-btn secondary" onclick="hideConfig()">Cerrar</button>
-      <button class="config-btn primary" onclick="applyConfig()">Aplicar</button>
-    </div>
-  </div>
-  
-  <!-- Overlay compacto -->
-  <div class="compact-overlay">
-    <!-- Equipo Local (Izquierda) -->
-    <div class="team-section left">
-      <div class="team-info">
-        <div class="team-name-compact left" id="nameTeam1">AUS</div>
-        <div class="team-score-compact" id="scoreTeam1">0</div>
-      </div>
-      
-      <div class="compact-logo left" id="logoTeam1">
-        <div class="logo-placeholder">A</div>
-      </div>
-      
-      <div class="possession-indicator" id="possessionTeam1"></div>
-    </div>
-    
-    <!-- Sección Central - AJUSTADA -->
-    <div class="center-section">
-      <!-- Tiempo principal arriba -->
-      <div class="main-clock-compact" id="mainClock">17:48</div>
-      
-      <!-- Periodo y faltas abajo -->
-      <div class="period-info">
-        <div class="period-name" id="periodDisplay">2nd</div>
-        <div class="fouls-display" id="foulsDisplay">3 ON 4</div>
-      </div>
-    </div>
-    
-    <!-- Equipo Visitante (Derecha) -->
-    <div class="team-section right">
-      <div class="possession-indicator" id="possessionTeam2"></div>
-      
-      <div class="compact-logo right" id="logoTeam2">
-        <div class="logo-placeholder">N</div>
-      </div>
-      
-      <div class="team-info">
-        <div class="team-name-compact right" id="nameTeam2">NZ</div>
-        <div class="team-score-compact" id="scoreTeam2">1</div>
-      </div>
-    </div>
+
+<div class="overlay">
+
+  <div class="team">
+    <div id="nameLocal">LOCAL</div>
+    <div class="score" id="scoreLocal">0</div>
   </div>
 
-  <script>
-    // Estado del overlay
-    setInterval(() => {
-  fetch('data.json?cache=' + Date.now())
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById('local').innerText = data.local;
-      document.getElementById('visit').innerText = data.visit;
-    });
-}, 300);
+  <div class="center">
+    <div class="time" id="time">10:00</div>
+    <div class="period" id="period">1T</div>
+  </div>
 
-    let overlayState = {
-      e1: "AUS",
-      e2: "NZ",
-      p1: 0,
-      p2: 1,
-      f1: 3,
-      f2: 4,
-      logo1: null,
-      logo2: null,
-      possession: 2, // 0 = ninguno, 1 = local, 2 = visitante
-      time: 1068, // 17:48 en segundos
-      running: false,
-      quarter: "2T"
-    };
+  <div class="team">
+    <div id="nameVisit">VISITA</div>
+    <div class="score" id="scoreVisit">0</div>
+  </div>
 
-    // Referencias a elementos
-    const nameTeam1 = document.getElementById('nameTeam1');
-    const nameTeam2 = document.getElementById('nameTeam2');
-    const scoreTeam1 = document.getElementById('scoreTeam1');
-    const scoreTeam2 = document.getElementById('scoreTeam2');
-    const logoTeam1 = document.getElementById('logoTeam1');
-    const logoTeam2 = document.getElementById('logoTeam2');
-    const mainClock = document.getElementById('mainClock');
-    const periodDisplay = document.getElementById('periodDisplay');
-    const foulsDisplay = document.getElementById('foulsDisplay');
-    const possessionTeam1 = document.getElementById('possessionTeam1');
-    const possessionTeam2 = document.getElementById('possessionTeam2');
-    const configButton = document.getElementById('configButton');
-    const configPanel = document.getElementById('configPanel');
-    const team1NameInput = document.getElementById('team1Name');
-    const team2NameInput = document.getElementById('team2Name');
-    const team1FileInput = document.getElementById('team1File');
-    const team2FileInput = document.getElementById('team2File');
-    const team1FileLabel = document.getElementById('team1FileLabel');
-    const team2FileLabel = document.getElementById('team2FileLabel');
+</div>
 
-    // Variables de comunicación
-    let bcMarcador = null;
-    let configVisible = false;
+<script>
+async function actualizar() {
+  try {
+    const res = await fetch("https://marcador-aso-final.onrender.com/estado?nocache=" + Date.now());
+    const data = await res.json();
 
-    // Mostrar/ocultar configuración
-    function toggleConfig() {
-      configVisible = !configVisible;
-      configPanel.classList.toggle('active', configVisible);
-      
-      if (configVisible) {
-        team1NameInput.value = overlayState.e1;
-        team2NameInput.value = overlayState.e2;
-      }
-    }
+    document.getElementById("scoreLocal").innerText = data.local;
+    document.getElementById("scoreVisit").innerText = data.visita;
 
-    function hideConfig() {
-      configVisible = false;
-      configPanel.classList.remove('active');
-    }
+    document.getElementById("time").innerText = data.tiempo;
+    document.getElementById("period").innerText = data.cuarto;
 
-    // Aplicar configuración
-    function applyConfig() {
-      if (team1NameInput.value.trim()) {
-        overlayState.e1 = team1NameInput.value.trim().toUpperCase();
-        nameTeam1.textContent = overlayState.e1;
-        updateLogoPlaceholder(1, overlayState.e1);
-      }
-      
-      if (team2NameInput.value.trim()) {
-        overlayState.e2 = team2NameInput.value.trim().toUpperCase();
-        nameTeam2.textContent = overlayState.e2;
-        updateLogoPlaceholder(2, overlayState.e2);
-      }
-      
-      hideConfig();
-      saveToLocalStorage();
-    }
+  } catch (e) {
+    console.log("Error:", e);
+  }
+}
 
-    // Actualizar placeholder del logo
-    function updateLogoPlaceholder(team, name) {
-      const placeholder = name.charAt(0);
-      if (team === 1 && !overlayState.logo1) {
-        logoTeam1.innerHTML = `<div class="logo-placeholder">${placeholder}</div>`;
-      }
-      if (team === 2 && !overlayState.logo2) {
-        logoTeam2.innerHTML = `<div class="logo-placeholder">${placeholder}</div>`;
-      }
-    }
+// actualizar cada segundo
+setInterval(actualizar, 1000);
+actualizar();
+</script>
 
-    // Configurar subida de archivos
-    function setupFileUploads() {
-      team1FileLabel.addEventListener('click', () => team1FileInput.click());
-      team2FileLabel.addEventListener('click', () => team2FileInput.click());
-      
-      team1FileInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file || !file.type.match('image.*')) return;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          overlayState.logo1 = e.target.result;
-          logoTeam1.innerHTML = `<img src="${overlayState.logo1}" alt="${overlayState.e1}" />`;
-          saveToLocalStorage();
-        };
-        reader.readAsDataURL(file);
-      });
-      
-      team2FileInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file || !file.type.match('image.*')) return;
-        
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          overlayState.logo2 = e.target.result;
-          logoTeam2.innerHTML = `<img src="${overlayState.logo2}" alt="${overlayState.e2}" />`;
-          saveToLocalStorage();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    // Guardar en localStorage
-    function saveToLocalStorage() {
-      try {
-        localStorage.setItem('overlay_compact_state', JSON.stringify({
-          e1: overlayState.e1,
-          e2: overlayState.e2,
-          logo1: overlayState.logo1,
-          logo2: overlayState.logo2
-        }));
-      } catch (e) {
-        console.error("Error guardando estado:", e);
-      }
-    }
-
-    // Cargar configuración guardada
-    function loadSavedConfig() {
-      try {
-        const saved = localStorage.getItem('overlay_compact_state');
-        if (saved) {
-          const data = JSON.parse(saved);
-          if (data.e1) {
-            overlayState.e1 = data.e1;
-            nameTeam1.textContent = data.e1;
-          }
-          if (data.e2) {
-            overlayState.e2 = data.e2;
-            nameTeam2.textContent = data.e2;
-          }
-          if (data.logo1) {
-            overlayState.logo1 = data.logo1;
-            logoTeam1.innerHTML = `<img src="${data.logo1}" alt="${overlayState.e1}" />`;
-          }
-          if (data.logo2) {
-            overlayState.logo2 = data.logo2;
-            logoTeam2.innerHTML = `<img src="${data.logo2}" alt="${overlayState.e2}" />`;
-          }
-        }
-      } catch (e) {
-        console.error("Error cargando configuración:", e);
-      }
-    }
-
-    // Conectar con el marcador principal
-    function initializeCommunication() {
-      try {
-        bcMarcador = new BroadcastChannel("marcador_channel");
-        bcMarcador.onmessage = (message) => {
-          if (message.data?.type === "state") {
-            updateFromMarcador(message.data.state);
-          }
-        };
-        console.log("✅ Conectado al marcador principal");
-      } catch (e) {
-        console.error("❌ Error con canal del marcador:", e);
-        setupLocalStorageListener();
-      }
-    }
-
-    // Listener para localStorage
-    function setupLocalStorageListener() {
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'marcador_state' && e.newValue) {
-          try {
-            const payload = JSON.parse(e.newValue);
-            if (payload && payload.state) {
-              updateFromMarcador(payload.state);
-            }
-          } catch (err) {
-            console.error("Error procesando storage del marcador:", err);
-          }
-        }
-      });
-    }
-
-    // Actualizar desde el marcador principal
-    function updateFromMarcador(newState) {
-      Object.assign(overlayState, newState);
-      updateDisplay();
-    }
-
-    // Actualizar display
-    function updateDisplay() {
-      // Nombres y puntajes
-      nameTeam1.textContent = overlayState.e1;
-      nameTeam2.textContent = overlayState.e2;
-      scoreTeam1.textContent = overlayState.p1;
-      scoreTeam2.textContent = overlayState.p2;
-      
-      // Logos
-      if (overlayState.logo1) {
-        logoTeam1.innerHTML = `<img src="${overlayState.logo1}" alt="${overlayState.e1}" />`;
-      } else {
-        updateLogoPlaceholder(1, overlayState.e1);
-      }
-      
-      if (overlayState.logo2) {
-        logoTeam2.innerHTML = `<img src="${overlayState.logo2}" alt="${overlayState.e2}" />`;
-      } else {
-        updateLogoPlaceholder(2, overlayState.e2);
-      }
-      
-      // Cronómetro
-      const minutes = Math.floor(overlayState.time / 60);
-      const seconds = overlayState.time % 60;
-      mainClock.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-      
-      if (overlayState.time <= 10 && overlayState.time > 0) {
-        mainClock.classList.add('warning');
-      } else {
-        mainClock.classList.remove('warning');
-      }
-      
-      // Periodo
-      const periodNames = {
-        "1T": "1st",
-        "2T": "2nd", 
-        "3T": "3rd",
-        "4T": "4th",
-        "OT1": "OT1",
-        "OT2": "OT2",
-        "OT3": "OT3"
-      };
-      periodDisplay.textContent = periodNames[overlayState.quarter] || overlayState.quarter;
-      
-      // Faltas
-      foulsDisplay.textContent = `${overlayState.f1} ON ${overlayState.f2}`;
-      if (overlayState.f1 >= 4 || overlayState.f2 >= 4) {
-        foulsDisplay.classList.add('highlight');
-      } else {
-        foulsDisplay.classList.remove('highlight');
-      }
-      
-      // Posesión
-      possessionTeam1.classList.toggle('active', overlayState.possession === 1);
-      possessionTeam2.classList.toggle('active', overlayState.possession === 2);
-    }
-
-    // Cargar estado inicial
-    function loadInitialState() {
-      try {
-        const rawMarcador = localStorage.getItem('marcador_state');
-        if (rawMarcador) {
-          const payload = JSON.parse(rawMarcador);
-          if (payload && payload.state) {
-            updateFromMarcador(payload.state);
-          }
-        }
-      } catch (e) {
-        console.error("Error cargando estado inicial:", e);
-      }
-    }
-
-    // Actualizar reloj cada segundo
-    function updateClock() {
-      if (overlayState.running && overlayState.time > 0) {
-        const minutes = Math.floor(overlayState.time / 60);
-        const seconds = overlayState.time % 60;
-        mainClock.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
-        if (overlayState.time <= 10) {
-          mainClock.classList.add('warning');
-        }
-      }
-    }
-
-    // Configurar controles
-    function setupControls() {
-      configButton.addEventListener('click', toggleConfig);
-      
-      document.addEventListener('click', (e) => {
-        if (configVisible && 
-            !configPanel.contains(e.target) && 
-            !configButton.contains(e.target)) {
-          hideConfig();
-        }
-      });
-      
-      setupFileUploads();
-    }
-
-    // Inicializar
-    window.addEventListener('load', () => {
-      initializeCommunication();
-      loadSavedConfig();
-      loadInitialState();
-      setupControls();
-      
-      setInterval(updateClock, 1000);
-      
-      console.log("✅ Overlay compacto listo");
-      console.log("📌 Tamaño: 800x150px");
-      console.log("📌 Logos grandes: 120px x 120px");
-      console.log("📌 Puntajes: 3.5rem (más grandes)");
-      console.log("📌 Centrado como en la imagen: Tiempo arriba, periodo y faltas abajo");
-      console.log("📌 Sin reloj de tiro");
-      console.log("📌 Todo se sincroniza automáticamente");
-    });
-  </script>
 </body>
 </html>
