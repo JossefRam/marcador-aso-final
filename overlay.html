@@ -376,12 +376,12 @@ socket.on("updateScore", (data) => {
   if (tiempo) tiempo.innerText = data.tiempo;
   if (cuarto) cuarto.innerText = data.cuarto;
 
-  updateFromMarcador({
-    p1: data.local,
-    p2: data.visita,
-    time: convertirTiempo(data.tiempo),
-    quarter: data.cuarto
-  });
+overlayState.p1 = data.local;
+overlayState.p2 = data.visita;
+overlayState.time = convertirTiempo(data.tiempo);
+overlayState.quarter = data.cuarto;
+
+updateDisplay();
 });
 </script>
 <body>
