@@ -630,5 +630,18 @@
       }
     }, 1000);
   </script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<script>
+
+const socket = io("https://marcador-aso-final-1.onrender.com");
+
+socket.on("estado", (data) => {
+  console.log("Datos recibidos:", data);
+
+  Object.assign(state, data);
+  updateUI();
+});
+</script>
 </body>
 </html>
