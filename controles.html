@@ -166,18 +166,6 @@
   }
 </style>
 </head>
-<script src="/socket.io/socket.io.js"></script>
-
-<script>
-  const socket = io("https://marcador-aso-final-1.onrender.com");
-
-    socket.emit("updateScore", {
-      local: local,
-      visita: visita
-    });
-  }
-</script>
-
 <body>
   
   <header>🏀 Panel de Control - Marcador Principal</header>
@@ -310,7 +298,13 @@
     </div>
 
   </div>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
+<script>
+ const socket = io("https://marcador-aso-final-1.onrender.com");
+
+
+</script>
   <script>
 /* STATE */
 const DEFAULT = {
@@ -326,7 +320,10 @@ const DEFAULT = {
   shotClockRunning: false // NUEVO: estado del reloj de tiro
 };
 let state = Object.assign({}, DEFAULT);
-
+socket.on("estado", (data) => {
+  Object.assign(state, data);
+  updateDisplay();
+});
 // Variables para controlar los sonidos
 let chicharraSound = null;
 let silbatoSound = null;
