@@ -169,11 +169,7 @@
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
-  const socket = io();
-
-  function enviarMarcador() {
-    const local = document.getElementById("local").value;
-    const visita = document.getElementById("visita").value;
+  const socket = io("https://marcador-aso-final-1.onrender.com");
 
     socket.emit("updateScore", {
       local: local,
@@ -390,8 +386,14 @@ window.addEventListener('storage', e=>{
 /* helpers */
 function saveState(broadcast=true){
   const payload = { state, ts: Date.now() };
+
   try{ localStorage.setItem('marcador_state', JSON.stringify(payload)); } catch(e){}
+
   if(broadcast && bc) bc.postMessage({ type:"state", state });
+
+  // 🔥 ESTA LÍNEA ES LA CLAVE
+  socket.emit("update", state);
+
   updateDisplay();
 }
 
